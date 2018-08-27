@@ -448,4 +448,11 @@ defmodule Explorer.Chain.InternalTransaction do
         it.created_contract_address_hash == ^address_hash
     )
   end
+
+  @doc """
+  Preloads names for address fields.
+  """
+  def preload_address_names(query) do
+    preload(query, [tt], created_contract_address: :names, from_address: :names, to_address: :names)
+  end
 end
