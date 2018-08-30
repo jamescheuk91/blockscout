@@ -2504,4 +2504,189 @@ defmodule Explorer.ChainTest do
       assert Chain.fetch_last_token_balances(address.hash) == []
     end
   end
+
+  describe "fetch_token_holders_from_token_hash/2" do
+    test "returns the last value for each address" do
+      %Token{contract_address_hash: contract_address_hash} = insert(:token)
+      address = insert(:address)
+
+      insert(
+        :token_balance,
+        address: address,
+        block_number: 1000,
+        token_contract_address_hash: contract_address_hash,
+        value: 5000
+      )
+
+      insert(
+        :token_balance,
+        block_number: 1001,
+        token_contract_address_hash: contract_address_hash,
+        value: 4000
+      )
+
+      insert(
+        :token_balance,
+        address: address,
+        block_number: 1002,
+        token_contract_address_hash: contract_address_hash,
+        value: 2000
+      )
+
+      values =
+        contract_address_hash
+        |> Chain.fetch_token_holders_from_token_hash([])
+        |> Enum.map(&Decimal.to_integer(&1.value))
+
+      assert values == [4000, 2000]
+    end
+
+    test "sort by the hightest value" do
+      %Token{contract_address_hash: contract_address_hash} = insert(:token)
+
+      insert(
+        :token_balance,
+        block_number: 1000,
+        token_contract_address_hash: contract_address_hash,
+        value: 2000
+      )
+
+      insert(
+        :token_balance,
+        block_number: 1001,
+        token_contract_address_hash: contract_address_hash,
+        value: 1000
+      )
+
+      insert(
+        :token_balance,
+        block_number: 1002,
+        token_contract_address_hash: contract_address_hash,
+        value: 4000
+      )
+
+      insert(
+        :token_balance,
+        block_number: 1002,
+        token_contract_address_hash: contract_address_hash,
+        value: 3000
+      )
+
+      values =
+        contract_address_hash
+        |> Chain.fetch_token_holders_from_token_hash([])
+        |> Enum.map(&Decimal.to_integer(&1.value))
+
+      assert values == [4000, 3000, 2000, 1000]
+    end
+
+    test "returns only token balances the have value" do
+      %Token{contract_address_hash: contract_address_hash} = insert(:token)
+
+      insert(
+        :token_balance,
+        token_contract_address_hash: contract_address_hash,
+        value: 0
+      )
+
+      assert Chain.fetch_token_holders_from_token_hash(contract_address_hash, []) == []
+    end
+
+    test "returns an empty list when there are no address with value greater than 0" do
+      %Token{contract_address_hash: contract_address_hash} = insert(:token)
+
+      insert(:token_balance, value: 1000)
+
+      assert Chain.fetch_token_holders_from_token_hash(contract_address_hash, []) == []
+    end
+
+    test "ignores the burn address" do
+      {:ok, burn_address_hash} = Chain.string_to_address_hash("0x0000000000000000000000000000000000000000")
+
+      burn_address = insert(:address, hash: burn_address_hash)
+
+      %Token{contract_address_hash: contract_address_hash} = insert(:token)
+
+      insert(
+        :token_balance,
+        address: burn_address,
+        token_contract_address_hash: contract_address_hash,
+        value: 1000
+      )
+
+      assert Chain.fetch_token_holders_from_token_hash(contract_address_hash, []) == []
+    end
+
+    test "considers the value to paginate the results" do
+      %Token{contract_address_hash: contract_address_hash} = insert(:token)
+
+      first_page =
+        insert(
+          :token_balance,
+          block_number: 1001,
+          token_contract_address_hash: contract_address_hash,
+          value: 5000
+        )
+
+      second_page =
+        insert(
+          :token_balance,
+          block_number: 1000,
+          token_contract_address_hash: contract_address_hash,
+          value: 4000
+        )
+
+      paging_options = %PagingOptions{
+        key: {first_page.value, first_page.block_number},
+        page_size: 1
+      }
+
+      holders_paginated =
+        contract_address_hash
+        |> Chain.fetch_token_holders_from_token_hash(paging_options: paging_options)
+        |> Enum.map(& &1.address_hash)
+
+      assert holders_paginated == [second_page.address_hash]
+    end
+
+    test "considers the block number when there are values with the same value" do
+      %Token{contract_address_hash: contract_address_hash} = insert(:token)
+
+      first_page =
+        insert(
+          :token_balance,
+          block_number: 1002,
+          token_contract_address_hash: contract_address_hash,
+          value: 4000
+        )
+
+      token_balance_c =
+        insert(
+          :token_balance,
+          block_number: 1003,
+          token_contract_address_hash: contract_address_hash,
+          value: 4000
+        )
+
+      token_balance_d =
+        insert(
+          :token_balance,
+          block_number: 999,
+          token_contract_address_hash: contract_address_hash,
+          value: 4000
+        )
+
+      paging_options = %PagingOptions{
+        key: {first_page.value, first_page.block_number},
+        page_size: 2
+      }
+
+      holders_paginated =
+        contract_address_hash
+        |> Chain.fetch_token_holders_from_token_hash(paging_options: paging_options)
+        |> Enum.map(& &1.block_number)
+
+      assert holders_paginated == [token_balance_c.block_number, token_balance_d.block_number]
+    end
+  end
 end
