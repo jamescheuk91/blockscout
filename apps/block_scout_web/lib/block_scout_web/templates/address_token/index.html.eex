@@ -10,15 +10,21 @@
         <ul class="nav nav-tabs card-header-tabs d-none d-md-inline-flex">
           <li class="nav-item">
             <%= link(
+                  gettext("Tokens"),
+                  class: "nav-link active",
+                  to: address_token_path(@conn, :index, @conn.assigns.locale, @conn.params["address_id"])
+                ) %>
+          </li>
+          <li class="nav-item">
+            <%= link(
                   gettext("Transactions"),
                   class: "nav-link",
                   to: address_transaction_path(@conn, :index, @conn.assigns.locale, @conn.params["address_id"])
                 ) %>
           </li>
-          <li class="nav-item">
-            <%= link(
+          <li class="nav-item"> <%= link(
                   gettext("Internal Transactions"),
-                  class: "nav-link active",
+                  class: "nav-link",
                   "data-test": "internal_transactions_tab_link",
                   to: address_internal_transaction_path(@conn, :index, @conn.assigns.locale, @conn.params["address_id"])
                 ) %>
@@ -49,8 +55,13 @@
         <!-- MOBILE DROPDOWN NAV -->
         <ul class="nav nav-tabs card-header-tabs d-md-none">
           <li class="nav-item dropdown flex-fill text-center">
-            <a class="nav-link active dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Internal Transactions</a>
+            <a class="nav-link active dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Tokens</a>
             <div class="dropdown-menu">
+              <%= link(
+                    gettext("Token"),
+                    class: "dropdown-item",
+                    to: address_token_path(@conn, :index, @conn.assigns.locale, @conn.params["address_id"])
+                  ) %>
               <%= link(
                     gettext("Transactions"),
                     class: "dropdown-item",
@@ -77,61 +88,25 @@
           </li>
         </ul>
       </div>
+
       <div class="card-body">
-        <div class="dropdown float-right u-push-sm">
-          <button data-test="filter_dropdown" class="button button-secondary button-xs dropdown-toggle" type="button"
-            id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Filter: <%= format_current_filter(@filter) %>
-          </button>
-          <div class="dropdown-menu dropdown-menu-right filter" aria-labelledby="dropdownMenu2">
-            <%= link(
-              gettext("All"),
-              to: address_internal_transaction_path(@conn, :index, @conn.assigns.locale, @conn.params["address_id"]),
-              class: "address__link address__link--active dropdown-item",
-              "data-test": "filter_option"
-            ) %>
-            <%= link(
-              gettext("To"),
-              to: address_internal_transaction_path(
-                @conn,
-                :index,
-                @conn.assigns.locale,
-                @conn.params["address_id"],
-                filter: "to"
-              ),
-              class: "address__link address__link--active dropdown-item",
-              "data-test": "filter_option"
-            ) %>
-            <%= link(
-              gettext("From"),
-              to: address_internal_transaction_path(
-                @conn,
-                :index,
-                @conn.assigns.locale,
-                @conn.params["address_id"],
-                filter: "from"
-              ),
-              class: "address__link address__link--active dropdown-item",
-              "data-test": "filter_option"
-            ) %>
-          </div>
-        </div>
-        <h2 class="card-title"><%= gettext "Internal Transactions" %></h2>
-        <%= if Enum.count(@internal_transactions) > 0 do %>
-          <%= for internal_transaction <- @internal_transactions do %>
-            <%= render "_internal_transaction.html", locale: @locale, address: @address, internal_transaction: internal_transaction %>
+        <h2 class="card-title"><%= gettext "Tokens" %></h2>
+        <%= if Enum.any?(@tokens) do %>
+          <%= for token <- @tokens do %>
+            <%= render "_tokens.html", conn: @conn, locale: @locale, token: token %>
           <% end %>
         <% else %>
           <div class="tile tile-muted text-center">
-            <span><%= gettext "There are no internal transactions for this address." %></span>
+            <span><%= gettext "There are no tokens for this address." %></span>
           </div>
         <% end %>
+
         <div>
           <%= if @next_page_params do %>
             <%= link(
-              gettext("Older"),
-              class: "button button-secondary button-sm float-right mt-3",
-              to: address_internal_transaction_path(
+              gettext("Next"),
+              class: "button button-secondary button-sm float-right",
+              to: address_token_path(
                 @conn,
                 :index,
                 @conn.assigns.locale,
@@ -143,6 +118,5 @@
         </div>
       </div>
     </div>
-
   </section>
 </section>
