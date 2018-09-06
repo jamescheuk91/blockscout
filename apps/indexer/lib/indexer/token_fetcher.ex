@@ -152,11 +152,20 @@ defmodule Indexer.TokenFetcher do
     token
     |> Map.from_struct()
     |> Map.put(:cataloged, true)
-    |> Map.merge(token_contract_data)
+    |> Map.merge(ignore_invalid_string(token_contract_data))
   end
 
   defp atomized_key("decimals"), do: :decimals
   defp atomized_key("name"), do: :name
   defp atomized_key("symbol"), do: :symbol
   defp atomized_key("totalSupply"), do: :total_supply
+
+  # It's a temp fix to ignore names and symbols that have characters the database doesn't accept.
+  # See https://github.com/poanetwork/blockscout/issues/669 for more info.
+  defp ignore_invalid_string(%{name: name, symbol: symbol} = data) do
+    name = if String.valid?(name), do: name
+    symbol = if String.valid?(symbol), do: symbol
+
+    %{data | name: name, symbol: symbol}
+  end
 end
